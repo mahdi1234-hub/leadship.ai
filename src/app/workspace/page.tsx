@@ -46,6 +46,7 @@ export default function WorkspacePage() {
   const [search, setSearch] = useState("")
   const [loading, setLoading] = useState(false)
   const [searching, setSearching] = useState(false)
+  const [searchMessage, setSearchMessage] = useState("")
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [autoEnrich, setAutoEnrich] = useState(true)
   const [activeNav, setActiveNav] = useState("Lead Search")
@@ -74,16 +75,26 @@ export default function WorkspacePage() {
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault()
-    if (!search.trim()) { fetchLeads(); return }
+    if (!search.trim()) { setSearchMessage(""); fetchLeads(); return }
     setSearching(true)
+    setSearchMessage("")
     try {
       const res = await fetch("/api/leads/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query: search }),
       })
-      if (res.ok) { setPage(1); await fetchLeads() }
-    } catch {} finally { setSearching(false) }
+      if (res.ok) {
+        const data = await res.json()
+        setSearchMessage(`AI found ${data.count} leads for "${search}"`)
+        setPage(1)
+        await fetchLeads()
+        setTimeout(() => setSearchMessage(""), 8000)
+      } else {
+        setSearchMessage("Search failed. Please try again.")
+      }
+    } catch { setSearchMessage("Network error. Please try again.") }
+    finally { setSearching(false) }
   }
 
   async function handleReveal(leadId: string) {
@@ -228,19 +239,33 @@ export default function WorkspacePage() {
             </div>
           </header>
 
+          {/* Search Message Banner */}
+          {searchMessage && (
+            <div className="px-6 py-2 bg-stone-900/5 border-b border-stone-300/40 flex items-center justify-between shrink-0">
+              <span className="text-xs font-medium text-stone-700">{searchMessage}</span>
+              <button onClick={() => setSearchMessage("")} className="text-stone-400 hover:text-stone-700 text-xs">Dismiss</button>
+            </div>
+          )}
+
           {/* Toolbar */}
           <div className="p-4 md:p-6 border-b border-stone-300/40 flex flex-wrap items-center justify-between gap-4 shrink-0">
             <form onSubmit={handleSearch} className="flex items-center gap-3 flex-1 min-w-[280px]">
               <div className="relative flex-1 max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 w-4 h-4" />
                 <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-                  placeholder="Search by name, role, or company..."
+                  placeholder="e.g. 'VP of Engineering at SaaS companies' or 'CMO fintech'"
                   className="w-full bg-[#EAE8E2] border border-stone-400/40 rounded-sm py-2 pl-10 pr-4 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-stone-500 focus:ring-1 focus:ring-stone-500 transition-all shadow-inner shadow-stone-300/20" />
               </div>
-              <button type="submit" disabled={searching}
-                className="flex items-center gap-2 border border-stone-400/40 bg-[#EAE8E2] px-3 py-2 rounded-sm text-sm font-medium text-stone-700 hover:bg-stone-300/30 transition-colors shadow-sm disabled:opacity-50">
+              <button type="submit" disabled={searching || !search.trim()}
+                className="flex items-center gap-2 bg-stone-900 text-[#EAE8E2] px-4 py-2 rounded-sm text-sm font-medium hover:bg-stone-800 transition-colors shadow-sm disabled:opacity-50">
+                <Wand2 className="w-4 h-4" />
+                {searching ? "Finding Leads..." : "Find Leads"}
+              </button>
+              <button type="button" onClick={() => { setSearch(""); setSearchMessage(""); fetchLeads() }}
+                className="flex items-center gap-2 border border-stone-400/40 bg-[#EAE8E2] px-3 py-2 rounded-sm text-sm font-medium text-stone-700 hover:bg-stone-300/30 transition-colors shadow-sm">
                 <Filter className="w-4 h-4" />
-                {searching ? "Searching..." : "Search"}
+                Filters
+                <span className="w-4 h-4 rounded-full bg-stone-200 flex items-center justify-center text-[10px] ml-1">3</span>
               </button>
             </form>
             <div className="flex items-center gap-2">
@@ -277,8 +302,17 @@ export default function WorkspacePage() {
                 {loading ? (
                   <tr><td colSpan={6} className="py-16 text-center text-stone-400 text-sm">Loading leads...</td></tr>
                 ) : leads.length === 0 ? (
-                  <tr><td colSpan={6} className="py-16 text-center text-stone-400 text-sm">
-                    No leads yet. Search for prospects using the search bar above.
+                  <tr><td colSpan={6} className="py-16 text-center">
+                    <div className="max-w-sm mx-auto">
+                      <Wand2 className="w-8 h-8 text-stone-300 mx-auto mb-4" />
+                      <p className="text-stone-600 font-medium mb-2">No leads yet</p>
+                      <p className="text-stone-400 text-sm mb-6">Use the AI-powered search to find leads in real time. Try queries like:</p>
+                      <div className="space-y-2 text-xs text-stone-500">
+                        <p className="bg-stone-200/50 rounded px-3 py-2 border border-stone-300/40">"VP of Engineering at SaaS companies"</p>
+                        <p className="bg-stone-200/50 rounded px-3 py-2 border border-stone-300/40">"CMO fintech startups"</p>
+                        <p className="bg-stone-200/50 rounded px-3 py-2 border border-stone-300/40">"Head of Growth e-commerce"</p>
+                      </div>
+                    </div>
                   </td></tr>
                 ) : leads.map(lead => (
                   <tr key={lead.id} className="hover:bg-stone-300/20 transition-colors group">
