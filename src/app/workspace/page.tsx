@@ -179,14 +179,25 @@ export default function WorkspacePage() {
             ))}
           </div>
 
-          {/* User */}
-          <div className="p-4 border-t border-stone-300/60">
-            <button onClick={() => signOut()} className="w-full flex items-center gap-3 px-2 py-2 text-sm font-medium text-stone-600 hover:text-stone-900 transition-colors">
-              {session?.user?.image ? (
-                <img src={session.user.image} alt="" className="w-7 h-7 rounded-full grayscale object-cover" />
-              ) : (
-                <Settings className="w-5 h-5" />
-              )}
+          {/* User Profile */}
+          <div className="p-4 border-t border-stone-300/60 space-y-2">
+            {session?.user && (
+              <div className="flex items-center gap-3 px-2 py-2">
+                {session.user.image ? (
+                  <img src={session.user.image} alt={session.user.name || ""} className="w-8 h-8 rounded-full grayscale object-cover" referrerPolicy="no-referrer" />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-stone-300 flex items-center justify-center text-stone-600 font-medium text-xs">
+                    {getInitials(session.user.name || "U")}
+                  </div>
+                )}
+                <div className="overflow-hidden">
+                  <p className="text-sm font-medium text-stone-800 truncate">{session.user.name}</p>
+                  <p className="text-[10px] text-stone-500 truncate">{session.user.email}</p>
+                </div>
+              </div>
+            )}
+            <button onClick={() => signOut({ callbackUrl: "/" })} className="w-full flex items-center gap-3 px-2 py-2 text-sm font-medium text-stone-500 hover:text-stone-900 hover:bg-stone-300/20 rounded-sm transition-colors">
+              <Settings className="w-4 h-4" />
               <span>Sign Out</span>
             </button>
           </div>

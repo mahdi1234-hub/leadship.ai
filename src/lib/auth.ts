@@ -24,6 +24,9 @@ export const authOptions: NextAuthOptions = {
     async session({ session, user }) {
       if (session.user) {
         (session.user as any).id = user.id
+        session.user.email = user.email || session.user.email
+        session.user.name = user.name || session.user.name
+        session.user.image = user.image || session.user.image
       }
       return session
     },
